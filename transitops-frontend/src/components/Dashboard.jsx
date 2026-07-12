@@ -38,6 +38,12 @@ const Dashboard = ({ role, setToken, setRole }) => {
           <h2>🗺️ Trip Dispatch</h2>
           <p>Assign trips, monitor active routes, and log fuel.</p>
         </Link>
+
+        <Link to="/reports" style={cardStyle}>
+          <h2>📊 Reports & Analytics</h2>
+          <p>View utilization KPIs and operational expenses.</p>
+        </Link>
+        
       </div>
     </div>
   );

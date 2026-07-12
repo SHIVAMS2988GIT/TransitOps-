@@ -21,6 +21,7 @@ app.use('/api/drivers', require('./routes/driverRoutes'));
 // Future Routes (Placeholders for the next phases)
 app.use('/api/trips', require('./routes/tripRoutes'));
 app.use('/api/maintenance', require('./routes/maintenanceRoutes'));
+app.use('/api/reports', require('./routes/reportRoutes'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

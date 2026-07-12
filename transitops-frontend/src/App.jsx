@@ -5,6 +5,8 @@ import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import Vehicles from './components/Vehicles';
 import Drivers from './components/Drivers';
+import Trips from './components/Trips';
+import Reports from './components/Reports'; // Added the new Reports import
 
 function ProtectedRoute({ children, token }) {
   if (!token) return <Navigate to="/login" />;
@@ -22,20 +24,32 @@ function App() {
           <Route path="/login" element={<Login setToken={setToken} setRole={setRole} />} />
           
           <Route path="/dashboard" element={
-            <ProtectedRoute>
+            <ProtectedRoute token={token}>
               <Dashboard role={role} setToken={setToken} setRole={setRole} />
             </ProtectedRoute>
           } />
 
           <Route path="/vehicles" element={
-            <ProtectedRoute>
+            <ProtectedRoute token={token}>
               <Vehicles />
             </ProtectedRoute>
           } />
 
           <Route path="/drivers" element={
-            <ProtectedRoute>
+            <ProtectedRoute token={token}>
               <Drivers />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/trips" element={
+            <ProtectedRoute token={token}>
+              <Trips />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/reports" element={
+            <ProtectedRoute token={token}>
+              <Reports />
             </ProtectedRoute>
           } />
           
