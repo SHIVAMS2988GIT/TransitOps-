@@ -34,9 +34,10 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = Number(process.env.PORT) || 5000;
-const server = app.listen(PORT, '0.0.0.0', () => 
-  console.log(`TransitOps API running on port ${PORT}`)
-);
+
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`TransitOps API running on port ${PORT}`);
+});
 const shutdown = async () => {
   server.close(async () => {
     await pool.end();
