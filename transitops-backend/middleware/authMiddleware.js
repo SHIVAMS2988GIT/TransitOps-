@@ -1,26 +1,28 @@
 const jwt = require('jsonwebtoken');
 
-// 1. Verify if the user is logged in
 exports.verifyToken = (req, res, next) => {
-    const token = req.header("Authorization");
-    if (!token) return res.status(403).json({ error: "Access Denied. No token provided." });
+  const header = req.header('Authorization');
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required.' });
+  }
 
-    try {
-        // Expecting token format: "Bearer <token>"
-        const verified = jwt.verify(token.split(" ")[1], process.env.JWT_SECRET);
-        req.user = verified.user;
-        next();
-    } catch (err) {
-        res.status(401).json({ error: "Invalid Token" });
-    }
+  const token = header.slice(7).trim();
+  if (!token || !process.env.JWT_SECRET) {
+    return res.status(401).json({ error: 'Authentication is not configured correctly.' });
+  }
+
+  try {
+    const verified = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = verified.user;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Session expired. Please sign in again.' });
+  }
 };
 
-// 2. Role-Based Access Control (RBAC)
-exports.authorizeRoles = (...allowedRoles) => {
-    return (req, res, next) => {
-        if (!req.user || !allowedRoles.includes(req.user.role)) {
-            return res.status(403).json({ error: "Access Denied. You do not have permission." });
-        }
-        next();
-    };
+exports.authorizeRoles = (...allowedRoles) => (req, res, next) => {
+  if (!req.user || !allowedRoles.includes(req.user.role)) {
+    return res.status(403).json({ error: 'Access denied for this role.' });
+  }
+  next();
 };

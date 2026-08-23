@@ -1,83 +1,11 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import axios from 'axios';
-
-const Drivers = () => {
-  const [drivers, setDrivers] = useState([]);
-  const [error, setError] = useState('');
-  const token = localStorage.getItem('token');
-  const role = localStorage.getItem('role');
-
-  useEffect(() => {
-    const fetchDrivers = async () => {
-      try {
-        const res = await axios.get('http://localhost:5000/api/drivers', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setDrivers(res.data);
-      } catch {
-        setError('Failed to fetch drivers.');
-      }
-    };
-    fetchDrivers();
-  }, [token]);
-
-  return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '1000px', margin: '0 auto' }}>
-      <Link to="/dashboard" style={{ textDecoration: 'none', color: '#007bff' }}>← Back to Dashboard</Link>
-      <h2 style={{ marginTop: '20px' }}>Driver Management</h2>
-      
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-
-      {(role === 'Fleet Manager' || role === 'Safety Officer') && (
-        <button style={{ padding: '10px 15px', background: '#28a745', color: '#fff', border: 'none', borderRadius: '4px', marginBottom: '20px', cursor: 'pointer' }}>
-          + Add New Driver
-        </button>
-      )}
-
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '10px' }}>
-        <thead>
-          <tr style={{ background: '#f4f4f4', textAlign: 'left' }}>
-            <th style={thStyle}>Name</th>
-            <th style={thStyle}>License No.</th>
-            <th style={thStyle}>Safety Score</th>
-            <th style={thStyle}>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {drivers.map((d) => (
-            <tr key={d.id} style={{ borderBottom: '1px solid #ddd' }}>
-              <td style={tdStyle}>{d.name}</td>
-              <td style={tdStyle}>{d.license_number}</td>
-              <td style={tdStyle}>
-                <span style={{ color: d.safety_score >= 80 ? 'green' : d.safety_score >= 50 ? 'orange' : 'red', fontWeight: 'bold' }}>
-                  {d.safety_score}/100
-                </span>
-              </td>
-              <td style={tdStyle}>
-                <span style={{ 
-                  padding: '6px 10px', 
-                  borderRadius: '12px', 
-                  fontSize: '0.85em',
-                  fontWeight: 'bold',
-                  color: '#333',
-                  background: d.status === 'Available' ? '#d4edda' : d.status === 'Suspended' ? '#f8d7da' : '#cce5ff' 
-                }}>
-                  {d.status}
-                </span>
-              </td>
-            </tr>
-          ))}
-          {drivers.length === 0 && (
-            <tr><td colSpan="4" style={{ padding: '20px', textAlign: 'center' }}>No drivers registered yet.</td></tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
-};
-
-const thStyle = { padding: '12px', borderBottom: '2px solid #ddd' };
-const tdStyle = { padding: '12px' };
-
-export default Drivers;
+import { useCallback, useEffect, useState } from 'react';
+import api from '../lib/api';
+import { Shell } from './Dashboard';
+const initial={name:'',license_number:'',license_category:'Heavy',license_expiry_date:'',contact_number:'',safety_score:'100'};
+export default function Drivers({role}){
+ const [drivers,setDrivers]=useState([]),[error,setError]=useState(''),[loading,setLoading]=useState(true),[show,setShow]=useState(false),[form,setForm]=useState(initial),[saving,setSaving]=useState(false),[query,setQuery]=useState('');
+ const load=useCallback(async()=>{setLoading(true);try{const r=await api.get('/drivers');setDrivers(r.data)}catch(e){setError(e.response?.data?.error||'Failed to load drivers.')}finally{setLoading(false)}},[]); useEffect(()=>{load()},[load]);
+ const submit=async(e)=>{e.preventDefault();setSaving(true);try{await api.post('/drivers',{...form,safety_score:Number(form.safety_score)});setShow(false);setForm(initial);load()}catch(e){setError(e.response?.data?.error||'Could not register driver.')}finally{setSaving(false)}};
+ const visible=drivers.filter(d=>`${d.name} ${d.license_number}`.toLowerCase().includes(query.toLowerCase()));
+ return <Shell role={role} onLogout={()=>{localStorage.clear();location.href='/login'}} title="Drivers" subtitle="Driver registry, safety and availability"><div className="page-heading"><div><h1>Driver Management</h1><p>Monitor licenses, safety scores and driver availability.</p></div>{(role==='Fleet Manager'||role==='Safety Officer')&&<button className="primary-btn" onClick={()=>setShow(true)}>＋ Add driver</button>}</div>{error&&<div className="alert error-alert">{error}<button onClick={load}>Retry</button></div>}<div className="toolbar"><input placeholder="Search drivers…" value={query} onChange={e=>setQuery(e.target.value)}/><button className="secondary-btn" onClick={load}>↻ Refresh</button></div><div className="panel table-panel">{loading?<div className="loading">Loading drivers…</div>:<table className="data-table"><thead><tr><th>Driver</th><th>License</th><th>Safety score</th><th>Contact</th><th>Status</th></tr></thead><tbody>{visible.map(d=><tr key={d.id}><td className="table-primary">{d.name}</td><td>{d.license_number}<div className="muted">{d.license_category} · exp. {d.license_expiry_date?.slice(0,10)}</div></td><td><span className={`score ${d.safety_score>=80?'good':d.safety_score>=50?'warn':'bad'}`}>{d.safety_score}/100</span></td><td>{d.contact_number||'—'}</td><td><span className="status-badge">{d.status}</span></td></tr>)}{!drivers.length&&<tr><td colSpan="5" className="loading">No drivers registered.</td></tr>}</tbody></table>}</div>{show&&<div className="modal-backdrop"><div className="modal"><div className="modal-header"><h2>Register driver</h2><button className="close-btn" onClick={()=>setShow(false)}>×</button></div><form onSubmit={submit}><div className="form-grid">{[['name','Full name'],['license_number','License number'],['license_category','License category'],['license_expiry_date','License expiry'],['contact_number','Contact number'],['safety_score','Safety score']].map(([k,l])=><label className="form-stack" key={k}>{l}<input required={['name','license_number','license_expiry_date'].includes(k)} type={k==='license_expiry_date'?'date':k==='safety_score'?'number':'text'} value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/></label>)}</div><div className="form-actions"><button type="button" className="secondary-btn" onClick={()=>setShow(false)}>Cancel</button><button className="primary-btn" disabled={saving}>{saving?'Saving…':'Register driver'}</button></div></form></div></div>}</Shell>
+}
